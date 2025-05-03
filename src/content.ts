@@ -9,12 +9,47 @@ interface ImageInfo {
   id: string; // Unique ID to replace in the markdown
 }
 
+// Interface for settings
+interface Settings {
+  addFrontmatter: boolean;
+  tags: string[];
+}
+
+// Function to generate Obsidian-like frontmatter
+function generateFrontmatter(title: string, settings: Settings): string {
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const description = document.querySelector('meta[name="description"]')?.getAttribute('content') || 
+                     document.querySelector('meta[property="og:description"]')?.getAttribute('content') || 
+                     'Page saved from ' + document.URL;
+  
+  // Format tags as YAML array
+  const tagsStr = settings.tags.map(tag => `  - ${tag}`).join('\n');
+  
+  return `---
+title: ${title}
+description: ${description}
+tags:
+${tagsStr}
+published: true
+date: ${date}
+---
+
+`;
+}
+
 // Function to convert HTML to Markdown with images in their original positions
-function htmlToMarkdown(element: HTMLElement, images: ImageInfo[]): string {
+function htmlToMarkdown(element: HTMLElement, images: ImageInfo[], settings: Settings): string {
   let markdown = '';
   
-  // Add title
-  markdown += `# ${document.title}\n\n`;
+  // Add frontmatter if enabled
+  if (settings.addFrontmatter) {
+    markdown += generateFrontmatter(document.title, settings);
+  } else {
+    // Just add the title as a heading
+    markdown += `# ${document.title}\n\n`;
+  }
+  
+  // Add source URL
   markdown += `Source: [${document.URL}](${document.URL})\n\n`;
   
   // Create a map of image elements to their markdown representation
@@ -144,6 +179,39 @@ function htmlToMarkdown(element: HTMLElement, images: ImageInfo[]): string {
             // Generic container elements - process their children
             for (let i = 0; i < element.childNodes.length; i++) {
               result += processNode(element.childNodes[i], depth + 1);
+            }
+            break;
+            
+          case 'table':
+            // Handle tables
+            const rows = element.querySelectorAll('tr');
+            if (rows.length > 0) {
+              // Process header row
+              const headerRow = rows[0];
+              const headers = headerRow.querySelectorAll('th');
+              if (headers.length > 0) {
+                // Table with headers
+                result += '| ' + Array.from(headers).map(th => th.textContent?.trim() || '').join(' | ') + ' |\n';
+                result += '| ' + Array.from(headers).map(() => '---').join(' | ') + ' |\n';
+                
+                // Process data rows
+                for (let i = 1; i < rows.length; i++) {
+                  const cells = rows[i].querySelectorAll('td');
+                  result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
+                }
+              } else {
+                // Table without headers, use first row as header
+                const cells = rows[0].querySelectorAll('td');
+                result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
+                result += '| ' + Array.from(cells).map(() => '---').join(' | ') + ' |\n';
+                
+                // Process remaining rows
+                for (let i = 1; i < rows.length; i++) {
+                  const cells = rows[i].querySelectorAll('td');
+                  result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
+                }
+              }
+              result += '\n';
             }
             break;
             
@@ -290,12 +358,12 @@ function collectImages(): ImageInfo[] {
 }
 
 // Function to get page content as markdown with image references
-function getPageAsMarkdown(): { markdown: string, images: { url: string, filename: string }[] } {
+function getPageAsMarkdown(settings: Settings): { markdown: string, images: { url: string, filename: string }[] } {
   // Collect all images
   const images = collectImages();
   
   // Convert HTML to markdown with images in their original positions
-  const markdown = htmlToMarkdown(document.body, images);
+  const markdown = htmlToMarkdown(document.body, images, settings);
   
   return {
     markdown,
@@ -308,7 +376,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Message received in content script:', message);
   
   if (message.action === 'getPageContent') {
-    const pageContent = getPageAsMarkdown();
+    // Default settings if not provided
+    const settings: Settings = message.settings || {
+      addFrontmatter: true,
+      tags: ['web-clipping']
+    };
+    
+    const pageContent = getPageAsMarkdown(settings);
     sendResponse({
       success: true,
       markdown: pageContent.markdown,

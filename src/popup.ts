@@ -3,17 +3,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const savePageButton = document.getElementById('savePage') as HTMLButtonElement;
   const statusDiv = document.getElementById('status') as HTMLDivElement;
   const downloadPathInput = document.getElementById('downloadPath') as HTMLInputElement;
+  const tagsInput = document.getElementById('tags') as HTMLInputElement;
+  const addFrontmatterCheckbox = document.getElementById('addFrontmatter') as HTMLInputElement;
   
-  // Load saved download path from storage
-  chrome.storage.sync.get(['downloadPath'], (result) => {
+  // Load saved settings from storage
+  chrome.storage.sync.get(['downloadPath', 'tags', 'addFrontmatter'], (result) => {
     if (result.downloadPath) {
       downloadPathInput.value = result.downloadPath;
     }
+    if (result.tags) {
+      tagsInput.value = result.tags;
+    }
+    if (result.addFrontmatter !== undefined) {
+      addFrontmatterCheckbox.checked = result.addFrontmatter;
+    }
   });
   
-  // Save download path when it changes
+  // Save settings when they change
   downloadPathInput.addEventListener('change', () => {
     chrome.storage.sync.set({ downloadPath: downloadPathInput.value });
+  });
+  
+  tagsInput.addEventListener('change', () => {
+    chrome.storage.sync.set({ tags: tagsInput.value });
+  });
+  
+  addFrontmatterCheckbox.addEventListener('change', () => {
+    chrome.storage.sync.set({ addFrontmatter: addFrontmatterCheckbox.checked });
   });
   
   // Save the current page as markdown with images
@@ -29,10 +45,19 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('No active tab found');
       }
       
+      // Get user-defined tags
+      const tags = tagsInput.value.trim();
+      
       // Send message to content script to get page content
       chrome.tabs.sendMessage(
         activeTab.id,
-        { action: 'getPageContent' },
+        { 
+          action: 'getPageContent',
+          settings: {
+            addFrontmatter: addFrontmatterCheckbox.checked,
+            tags: tags ? tags.split(',').map(tag => tag.trim()) : ['web-clipping']
+          }
+        },
         async (response) => {
           if (!response || !response.success) {
             statusDiv.textContent = 'Error: Failed to get page content';

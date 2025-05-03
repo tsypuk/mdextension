@@ -8,6 +8,8 @@ A Chrome extension for saving web pages as Markdown with images, built with Type
 - Automatically download all images from the page
 - Organize downloads in a folder structure
 - Configure download location
+- Add Obsidian-compatible YAML frontmatter
+- Customize tags for saved pages
 - Simple one-click interface
 - Works on any website
 - Context menu integration
@@ -43,12 +45,30 @@ A Chrome extension for saving web pages as Markdown with images, built with Type
 ## How It Works
 
 1. When you click the extension icon, it activates the popup
-2. Enter your preferred download path (relative to Downloads folder)
-3. Click "Save Page as Markdown" to start the process
-4. The content script extracts the page content and converts it to Markdown
-5. The content script also collects all images on the page
-6. The extension creates a folder with the page title
-7. The markdown file and all images are saved in this folder
+2. Enter your preferred download path (absolute path)
+3. Add custom tags for the page (optional)
+4. Toggle Obsidian frontmatter on/off
+5. Click "Save Page as Markdown" to start the process
+6. The content script extracts the page content and converts it to Markdown
+7. The content script also collects all images on the page
+8. The extension creates a folder with the page title
+9. The markdown file and all images are saved in this folder
+
+## Obsidian Frontmatter
+
+The extension adds Obsidian-compatible YAML frontmatter to the top of each markdown file:
+
+```yaml
+---
+title: Page Title
+description: Page description from meta tags
+tags:
+  - web-clipping
+  - your-custom-tag
+published: true
+date: YYYY-MM-DD
+---
+```
 
 ## License
 
