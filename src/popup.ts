@@ -46,12 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
               .toLowerCase()
               .substring(0, 50); // Limit length
             
-            // Get the download path from input
+            // Get the download path from input - use absolute path
             const downloadPath = downloadPathInput.value.trim();
             
-            // Create the full path for the folder
+            // Create the full path for the folder - use absolute path if provided
             const folderPath = downloadPath 
-              ? `${downloadPath}/${sanitizedTitle}`
+              ? downloadPath + '/' + sanitizedTitle
               : sanitizedTitle;
             
             // Create a text file with the markdown content

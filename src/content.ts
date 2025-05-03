@@ -1,48 +1,129 @@
 // Content script that runs on web pages
 console.log('Markdown extension content script loaded');
 
-// Function to convert HTML to Markdown
-// In a real implementation, you'd use a library like TurndownJS
-function htmlToMarkdown(element: HTMLElement): string {
+// Interface for image information
+interface ImageInfo {
+  url: string;
+  filename: string;
+  element: HTMLImageElement;
+  id: string; // Unique ID to replace in the markdown
+}
+
+// Function to convert HTML to Markdown with images in their original positions
+function htmlToMarkdown(element: HTMLElement, images: ImageInfo[]): string {
+  // Create a clone of the element to work with
+  const clone = element.cloneNode(true) as HTMLElement;
+  
+  // Create a mapping of image elements to their markdown placeholders
+  const imageMap = new Map<HTMLImageElement, string>();
+  images.forEach(img => {
+    const imgElements = clone.querySelectorAll('img');
+    for (const imgElement of imgElements) {
+      if (imgElement.src === img.element.src) {
+        const altText = imgElement.alt || 'image';
+        const placeholder = `![${altText}](images/${img.filename})`;
+        imageMap.set(imgElement, placeholder);
+      }
+    }
+  });
+  
+  // Process the clone element
   let markdown = '';
   
+  // Add title
+  markdown += `# ${document.title}\n\n`;
+  markdown += `Source: [${document.URL}](${document.URL})\n\n`;
+  
   // Process headings
-  const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const headings = clone.querySelectorAll('h1, h2, h3, h4, h5, h6');
   headings.forEach(heading => {
     const level = parseInt(heading.tagName.substring(1));
     const hashes = '#'.repeat(level);
     markdown += `${hashes} ${heading.textContent?.trim()}\n\n`;
+    
+    // Remove processed heading to avoid duplication
+    heading.parentNode?.removeChild(heading);
   });
   
-  // Process paragraphs
-  const paragraphs = element.querySelectorAll('p');
+  // Process paragraphs and replace images
+  const paragraphs = clone.querySelectorAll('p');
   paragraphs.forEach(p => {
-    markdown += `${p.textContent?.trim()}\n\n`;
+    let paragraphText = p.textContent?.trim() || '';
+    
+    // Check if paragraph contains images
+    const images = p.querySelectorAll('img');
+    if (images.length > 0) {
+      images.forEach(img => {
+        if (imageMap.has(img)) {
+          // If the paragraph only contains the image, replace the whole paragraph
+          if (p.textContent?.trim() === '') {
+            paragraphText = imageMap.get(img) || '';
+          } else {
+            // Otherwise, add the image after the paragraph
+            paragraphText += '\n\n' + (imageMap.get(img) || '');
+          }
+        }
+      });
+    }
+    
+    markdown += `${paragraphText}\n\n`;
   });
   
   // Process lists
-  const lists = element.querySelectorAll('ul, ol');
+  const lists = clone.querySelectorAll('ul, ol');
   lists.forEach(list => {
     const isOrdered = list.tagName.toLowerCase() === 'ol';
     const items = list.querySelectorAll('li');
     items.forEach((item, index) => {
       const prefix = isOrdered ? `${index + 1}. ` : '- ';
-      markdown += `${prefix}${item.textContent?.trim()}\n`;
+      
+      // Check if list item contains images
+      const images = item.querySelectorAll('img');
+      let itemText = item.textContent?.trim() || '';
+      
+      if (images.length > 0) {
+        images.forEach(img => {
+          if (imageMap.has(img)) {
+            // Add the image after the list item text
+            itemText += ' ' + (imageMap.get(img) || '');
+          }
+        });
+      }
+      
+      markdown += `${prefix}${itemText}\n`;
     });
     markdown += '\n';
+  });
+  
+  // Process remaining images that weren't in paragraphs or lists
+  images.forEach(img => {
+    const imgElement = img.element;
+    // Check if this image was already processed
+    let wasProcessed = false;
+    imageMap.forEach((placeholder, element) => {
+      if (element.src === imgElement.src) {
+        wasProcessed = true;
+      }
+    });
+    
+    // If not processed, add it now
+    if (!wasProcessed) {
+      const altText = imgElement.alt || 'image';
+      markdown += `![${altText}](images/${img.filename})\n\n`;
+    }
   });
   
   return markdown;
 }
 
 // Function to collect all images from the page
-function collectImages(): { url: string, filename: string }[] {
-  const images: { url: string, filename: string }[] = [];
+function collectImages(): ImageInfo[] {
+  const images: ImageInfo[] = [];
   const imgElements = document.querySelectorAll('img');
   
   imgElements.forEach((img, index) => {
     const src = img.src;
-    if (src && src.trim() !== '') {
+    if (src && src.trim() !== '' && img.width > 10 && img.height > 10) { // Skip tiny images
       try {
         // Create a filename from the image URL
         let filename = src.split('/').pop() || `image_${index}.jpg`;
@@ -57,7 +138,9 @@ function collectImages(): { url: string, filename: string }[] {
         
         images.push({
           url: src,
-          filename: filename
+          filename: filename,
+          element: img,
+          id: `img_${index}`
         });
       } catch (e) {
         console.error('Error processing image:', e);
@@ -76,24 +159,12 @@ function getPageAsMarkdown(): { markdown: string, images: { url: string, filenam
   // Collect all images
   const images = collectImages();
   
-  // Convert HTML to markdown (basic implementation)
-  let markdown = `# ${document.title}\n\n`;
-  markdown += `Source: [${document.URL}](${document.URL})\n\n`;
-  
-  // Add main content
-  markdown += htmlToMarkdown(mainContent);
-  
-  // Add image references at the end
-  if (images.length > 0) {
-    markdown += '\n## Images\n\n';
-    images.forEach(image => {
-      markdown += `![Image](images/${image.filename})\n\n`;
-    });
-  }
+  // Convert HTML to markdown with images in their original positions
+  const markdown = htmlToMarkdown(mainContent, images);
   
   return {
     markdown,
-    images
+    images: images.map(img => ({ url: img.url, filename: img.filename }))
   };
 }
 
