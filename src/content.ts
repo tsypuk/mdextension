@@ -2,6 +2,7 @@
 console.log('Markdown extension content script loaded');
 
 // Function to convert HTML to Markdown
+// In a real implementation, you'd use a library like TurndownJS
 function htmlToMarkdown(element: HTMLElement): string {
   let markdown = '';
   
@@ -31,43 +32,36 @@ function htmlToMarkdown(element: HTMLElement): string {
     markdown += '\n';
   });
   
-  // Process links
-  const links = element.querySelectorAll('a');
-  links.forEach(link => {
-    const text = link.textContent?.trim() || '';
-    const href = link.getAttribute('href') || '';
-    if (text && href) {
-      // Replace inline links in the markdown
-      const markdownLink = `[${text}](${href})`;
-      // This is a simplified approach - in a real implementation you'd need to
-      // replace the actual link in the context of the surrounding text
-    }
-  });
-  
   return markdown;
 }
 
 // Function to collect all images from the page
-function collectImages(): { url: string, filename: string, element: HTMLImageElement }[] {
-  const images: { url: string, filename: string, element: HTMLImageElement }[] = [];
+function collectImages(): { url: string, filename: string }[] {
+  const images: { url: string, filename: string }[] = [];
   const imgElements = document.querySelectorAll('img');
   
   imgElements.forEach((img, index) => {
     const src = img.src;
-    if (src) {
-      // Create a filename from the image URL
-      let filename = src.split('/').pop() || `image_${index}.jpg`;
-      // Clean up the filename
-      filename = filename.split('?')[0]; // Remove query parameters
-      if (!filename.includes('.')) {
-        filename += '.jpg'; // Add extension if missing
+    if (src && src.trim() !== '') {
+      try {
+        // Create a filename from the image URL
+        let filename = src.split('/').pop() || `image_${index}.jpg`;
+        // Clean up the filename
+        filename = filename.split('?')[0]; // Remove query parameters
+        if (!filename.includes('.')) {
+          filename += '.jpg'; // Add extension if missing
+        }
+        
+        // Make sure filename is valid
+        filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+        
+        images.push({
+          url: src,
+          filename: filename
+        });
+      } catch (e) {
+        console.error('Error processing image:', e);
       }
-      
-      images.push({
-        url: src,
-        filename: `images/${filename}`,
-        element: img
-      });
     }
   });
   
@@ -88,20 +82,17 @@ function getPageAsMarkdown(): { markdown: string, images: { url: string, filenam
   // Add main content
   markdown += htmlToMarkdown(mainContent);
   
-  // Replace image references in the markdown
-  images.forEach(image => {
-    const imgElement = image.element;
-    const altText = imgElement.alt || 'image';
-    const markdownImgRef = `![${altText}](${image.filename})`;
-    
-    // In a real implementation, you'd need to find where this image appears
-    // in the content and replace it with the markdown reference
-    markdown += `\n${markdownImgRef}\n`;
-  });
+  // Add image references at the end
+  if (images.length > 0) {
+    markdown += '\n## Images\n\n';
+    images.forEach(image => {
+      markdown += `![Image](images/${image.filename})\n\n`;
+    });
+  }
   
   return {
     markdown,
-    images: images.map(img => ({ url: img.url, filename: img.filename }))
+    images
   };
 }
 

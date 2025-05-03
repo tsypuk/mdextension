@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Markdown Extension",
+  "name": "Markdown Page Saver",
   "version": "1.0.0",
-  "description": "A Chrome extension for working with Markdown",
-  "permissions": ["storage", "activeTab"],
+  "description": "Save web pages as markdown with images",
+  "permissions": ["activeTab", "downloads"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

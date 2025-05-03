@@ -22,14 +22,18 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js']
+    extensions: ['.tsx', '.ts', '.js'],
+    fallback: {
+      "path": false,
+      "fs": false
+    }
   },
   plugins: [
     new CopyPlugin({
       patterns: [
         { from: 'src/manifest.json', to: 'manifest.json' },
         { from: 'src/popup.html', to: 'popup.html' },
-        { from: 'src/icons', to: 'icons', noErrorOnMissing: true }
+        { from: 'src/icons', to: 'icons' }
       ]
     })
   ],

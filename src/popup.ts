@@ -3,55 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const savePageButton = document.getElementById('savePage') as HTMLButtonElement;
   const statusDiv = document.getElementById('status') as HTMLDivElement;
   
-  // Function to create a ZIP file with markdown and images
-  async function createZipFile(markdown: string, images: { url: string, filename: string }[], title: string): Promise<Blob> {
-    // We'll need to dynamically import JSZip
-    // In a real implementation, you'd add JSZip as a dependency in package.json
-    const JSZip = (await import('jszip')).default;
-    const zip = new JSZip();
-    
-    // Add the markdown file
-    const sanitizedTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    zip.file(`${sanitizedTitle}.md`, markdown);
-    
-    // Create images folder
-    const imagesFolder = zip.folder('images');
-    
-    // Add all images
-    const imagePromises = images.map(async (image) => {
-      try {
-        const response = await fetch(image.url);
-        if (!response.ok) throw new Error(`Failed to fetch image: ${image.url}`);
-        
-        const blob = await response.blob();
-        const filename = image.filename.split('/').pop() || 'image.jpg';
-        imagesFolder?.file(filename, blob);
-        
-        return { success: true, url: image.url };
-      } catch (error) {
-        console.error(`Error downloading image ${image.url}:`, error);
-        return { success: false, url: image.url, error };
-      }
-    });
-    
-    await Promise.all(imagePromises);
-    
-    // Generate the zip file
-    return await zip.generateAsync({ type: 'blob' });
-  }
-  
-  // Function to download the ZIP file
-  function downloadZip(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-  
   // Save the current page as markdown with images
   savePageButton.addEventListener('click', async () => {
     statusDiv.textContent = 'Processing page...';
@@ -75,24 +26,49 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
           
-          statusDiv.textContent = 'Creating ZIP file with markdown and images...';
-          
           try {
-            // Create ZIP file with markdown and images
-            const zipBlob = await createZipFile(
-              response.markdown,
-              response.images,
-              response.title
-            );
+            // Create a sanitized title for the filename
+            const sanitizedTitle = response.title
+              .replace(/[^a-zA-Z0-9]/g, '_')
+              .toLowerCase()
+              .substring(0, 50); // Limit length
             
-            // Download the ZIP file
-            const sanitizedTitle = response.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            downloadZip(zipBlob, `${sanitizedTitle}_markdown.zip`);
+            // Create a text file with the markdown content
+            const markdownBlob = new Blob([response.markdown], { type: 'text/markdown' });
+            const markdownUrl = URL.createObjectURL(markdownBlob);
+            
+            // Download the markdown file
+            chrome.downloads.download({
+              url: markdownUrl,
+              filename: `${sanitizedTitle}.md`,
+              saveAs: true
+            });
+            
+            // Download each image
+            if (response.images && response.images.length > 0) {
+              statusDiv.textContent = `Downloading ${response.images.length} images...`;
+              
+              // Create a folder for images
+              const folderName = `${sanitizedTitle}_images`;
+              
+              // Download each image
+              for (const image of response.images) {
+                try {
+                  chrome.downloads.download({
+                    url: image.url,
+                    filename: `${folderName}/${image.filename}`,
+                    conflictAction: 'uniquify'
+                  });
+                } catch (error) {
+                  console.error(`Error downloading image ${image.url}:`, error);
+                }
+              }
+            }
             
             statusDiv.textContent = 'Page saved as markdown with images!';
           } catch (error) {
-            console.error('Error creating ZIP file:', error);
-            statusDiv.textContent = 'Error: Failed to create ZIP file';
+            console.error('Error saving content:', error);
+            statusDiv.textContent = 'Error: Failed to save content';
           }
         }
       );
