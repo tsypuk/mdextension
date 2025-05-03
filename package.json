@@ -1,22 +1,27 @@
 {
   "name": "markdown-extension",
   "version": "1.0.0",
-  "description": "A Chrome extension for working with Markdown content",
+  "description": "A Chrome extension for saving web pages as markdown with images",
   "main": "index.js",
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["markdown", "chrome-extension", "typescript"],
+  "keywords": ["markdown", "chrome-extension", "typescript", "web-clipper"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/chrome": "^0.0.318",
+    "@types/jszip": "^3.4.1",
     "copy-webpack-plugin": "^13.0.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
     "webpack": "^5.99.7",
     "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "turndown": "^7.1.2"
   }
 }
