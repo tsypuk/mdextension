@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Create the full path for the folder - use absolute path if provided
             const folderPath = downloadPath 
-              ? downloadPath + '/' + sanitizedTitle
+              ? `${downloadPath}/${sanitizedTitle}`
               : sanitizedTitle;
             
             // Create a text file with the markdown content
@@ -74,24 +74,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusDiv.textContent = `Downloading ${response.images.length} images...`;
                 
                 let completedDownloads = 0;
+                let failedDownloads = 0;
                 
-                // Download each image
-                for (const image of response.images) {
-                  try {
-                    chrome.downloads.download({
-                      url: image.url,
-                      filename: `${folderPath}/images/${image.filename}`,
-                      conflictAction: 'uniquify'
-                    }, () => {
-                      completedDownloads++;
-                      if (completedDownloads === response.images.length) {
-                        statusDiv.textContent = 'Page saved as markdown with images!';
+                // Create images directory first
+                chrome.downloads.download({
+                  url: URL.createObjectURL(new Blob([''])),
+                  filename: `${folderPath}/images/.placeholder`,
+                  saveAs: false
+                }, () => {
+                  // Download each image
+                  for (const image of response.images) {
+                    try {
+                      chrome.downloads.download({
+                        url: image.url,
+                        filename: `${folderPath}/images/${image.filename}`,
+                        conflictAction: 'uniquify'
+                      }, (downloadId) => {
+                        if (chrome.runtime.lastError) {
+                          console.error(`Failed to download image: ${image.url}`, chrome.runtime.lastError);
+                          failedDownloads++;
+                        } else {
+                          completedDownloads++;
+                        }
+                        
+                        if (completedDownloads + failedDownloads === response.images.length) {
+                          if (failedDownloads > 0) {
+                            statusDiv.textContent = `Page saved! ${completedDownloads} images downloaded, ${failedDownloads} failed.`;
+                          } else {
+                            statusDiv.textContent = 'Page saved as markdown with all images!';
+                          }
+                        }
+                      });
+                    } catch (error) {
+                      console.error(`Error downloading image ${image.url}:`, error);
+                      failedDownloads++;
+                      
+                      if (completedDownloads + failedDownloads === response.images.length) {
+                        statusDiv.textContent = `Page saved! ${completedDownloads} images downloaded, ${failedDownloads} failed.`;
                       }
-                    });
-                  } catch (error) {
-                    console.error(`Error downloading image ${image.url}:`, error);
+                    }
                   }
-                }
+                });
               } else {
                 statusDiv.textContent = 'Page saved as markdown! (No images found)';
               }
