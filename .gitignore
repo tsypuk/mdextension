@@ -15,7 +15,7 @@ yarn.lock
 out/
 
 # Build outputs
-dist/
+#dist/
 build/
 *.tsbuildinfo
 
