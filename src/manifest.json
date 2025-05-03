@@ -3,7 +3,7 @@
   "name": "Markdown Page Saver",
   "version": "1.0.0",
   "description": "Save web pages as markdown with images",
-  "permissions": ["activeTab", "downloads"],
+  "permissions": ["activeTab", "downloads", "storage", "contextMenus"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

@@ -78,6 +78,7 @@ function getPageAsMarkdown(): { markdown: string, images: { url: string, filenam
   
   // Convert HTML to markdown (basic implementation)
   let markdown = `# ${document.title}\n\n`;
+  markdown += `Source: [${document.URL}](${document.URL})\n\n`;
   
   // Add main content
   markdown += htmlToMarkdown(mainContent);

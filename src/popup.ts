@@ -2,6 +2,19 @@
 document.addEventListener('DOMContentLoaded', () => {
   const savePageButton = document.getElementById('savePage') as HTMLButtonElement;
   const statusDiv = document.getElementById('status') as HTMLDivElement;
+  const downloadPathInput = document.getElementById('downloadPath') as HTMLInputElement;
+  
+  // Load saved download path from storage
+  chrome.storage.sync.get(['downloadPath'], (result) => {
+    if (result.downloadPath) {
+      downloadPathInput.value = result.downloadPath;
+    }
+  });
+  
+  // Save download path when it changes
+  downloadPathInput.addEventListener('change', () => {
+    chrome.storage.sync.set({ downloadPath: downloadPathInput.value });
+  });
   
   // Save the current page as markdown with images
   savePageButton.addEventListener('click', async () => {
@@ -27,45 +40,62 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           try {
-            // Create a sanitized title for the filename
+            // Create a sanitized title for the folder name
             const sanitizedTitle = response.title
               .replace(/[^a-zA-Z0-9]/g, '_')
               .toLowerCase()
               .substring(0, 50); // Limit length
             
+            // Get the download path from input
+            const downloadPath = downloadPathInput.value.trim();
+            
+            // Create the full path for the folder
+            const folderPath = downloadPath 
+              ? `${downloadPath}/${sanitizedTitle}`
+              : sanitizedTitle;
+            
             // Create a text file with the markdown content
             const markdownBlob = new Blob([response.markdown], { type: 'text/markdown' });
             const markdownUrl = URL.createObjectURL(markdownBlob);
             
-            // Download the markdown file
+            // Download the markdown file to the folder
             chrome.downloads.download({
               url: markdownUrl,
-              filename: `${sanitizedTitle}.md`,
-              saveAs: true
-            });
-            
-            // Download each image
-            if (response.images && response.images.length > 0) {
-              statusDiv.textContent = `Downloading ${response.images.length} images...`;
-              
-              // Create a folder for images
-              const folderName = `${sanitizedTitle}_images`;
-              
-              // Download each image
-              for (const image of response.images) {
-                try {
-                  chrome.downloads.download({
-                    url: image.url,
-                    filename: `${folderName}/${image.filename}`,
-                    conflictAction: 'uniquify'
-                  });
-                } catch (error) {
-                  console.error(`Error downloading image ${image.url}:`, error);
-                }
+              filename: `${folderPath}/${sanitizedTitle}.md`,
+              saveAs: false
+            }, (downloadId) => {
+              if (chrome.runtime.lastError) {
+                statusDiv.textContent = `Error: ${chrome.runtime.lastError.message}`;
+                return;
               }
-            }
-            
-            statusDiv.textContent = 'Page saved as markdown with images!';
+              
+              // Download each image to the same folder
+              if (response.images && response.images.length > 0) {
+                statusDiv.textContent = `Downloading ${response.images.length} images...`;
+                
+                let completedDownloads = 0;
+                
+                // Download each image
+                for (const image of response.images) {
+                  try {
+                    chrome.downloads.download({
+                      url: image.url,
+                      filename: `${folderPath}/images/${image.filename}`,
+                      conflictAction: 'uniquify'
+                    }, () => {
+                      completedDownloads++;
+                      if (completedDownloads === response.images.length) {
+                        statusDiv.textContent = 'Page saved as markdown with images!';
+                      }
+                    });
+                  } catch (error) {
+                    console.error(`Error downloading image ${image.url}:`, error);
+                  }
+                }
+              } else {
+                statusDiv.textContent = 'Page saved as markdown! (No images found)';
+              }
+            });
           } catch (error) {
             console.error('Error saving content:', error);
             statusDiv.textContent = 'Error: Failed to save content';

@@ -6,8 +6,11 @@ A Chrome extension for saving web pages as Markdown with images, built with Type
 
 - Save any web page as a Markdown file
 - Automatically download all images from the page
+- Organize downloads in a folder structure
+- Configure download location
 - Simple one-click interface
 - Works on any website
+- Context menu integration
 
 ## Development Setup
 
@@ -40,10 +43,12 @@ A Chrome extension for saving web pages as Markdown with images, built with Type
 ## How It Works
 
 1. When you click the extension icon, it activates the popup
-2. Clicking "Save Page as Markdown" sends a message to the content script
-3. The content script extracts the page content and converts it to Markdown
-4. The content script also collects all images on the page
-5. The popup script downloads the Markdown file and all images
+2. Enter your preferred download path (relative to Downloads folder)
+3. Click "Save Page as Markdown" to start the process
+4. The content script extracts the page content and converts it to Markdown
+5. The content script also collects all images on the page
+6. The extension creates a folder with the page title
+7. The markdown file and all images are saved in this folder
 
 ## License
 

@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <style>
     body {
-      width: 300px;
+      width: 350px;
       padding: 10px;
       font-family: Arial, sans-serif;
     }
@@ -40,12 +40,43 @@
       color: #666;
       margin-bottom: 15px;
     }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .settings-section {
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <h2>Markdown Saver</h2>
   <div class="description">
     Save the current page as a markdown file with all images.
+  </div>
+  
+  <div class="settings-section">
+    <div class="form-group">
+      <label for="downloadPath">Download Path:</label>
+      <input type="text" id="downloadPath" placeholder="e.g., Downloads/markdown-pages">
+      <div class="description">
+        Relative to your Downloads folder. Leave empty for default location.
+      </div>
+    </div>
   </div>
   
   <button id="savePage">Save Page as Markdown</button>
