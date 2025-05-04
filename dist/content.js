@@ -341,12 +341,16 @@ function collectImages() {
     });
     return images;
 }
+// Sanitize ' '
+function normalizeSpaces(str) {
+    return str.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+}
 // Function to get page content as markdown with image references
 function getPageAsMarkdown(settings) {
     // Collect all images
     const images = collectImages();
     // Convert HTML to markdown with images in their original positions
-    const markdown = htmlToMarkdown(document.body, images, settings);
+    const markdown = normalizeSpaces(htmlToMarkdown(document.body, images, settings));
     return {
         markdown,
         images: images.map(img => ({ url: img.url, filename: img.filename }))
