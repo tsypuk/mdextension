@@ -26,8 +26,8 @@ function generateFrontmatter(title: string, settings: Settings): string {
   const tagsStr = settings.tags.map(tag => `  - ${tag}`).join('\n');
 
   return `---
-title: ${title}
-description: ${description}
+title: ${removeSpecialSymbols(title)}
+description: ${removeSpecialSymbols(description)}
 tags:
 ${tagsStr}
 published: true
@@ -35,6 +35,17 @@ date: ${date}
 ---
 
 `;
+}
+
+function removeSpecialSymbols(str: string): string {
+  // Define symbols to remove here (markdown incompatible for title/description)
+  const symbolsToRemove = [':', '#', '*'];
+
+  // Escape special regex characters
+  const escapedSymbols = symbolsToRemove.map(s => '\\' + s).join('');
+  const regex = new RegExp(`[${escapedSymbols}]`, 'g');
+
+  return str.replace(regex, '');
 }
 
 // Function to convert HTML to Markdown with images in their original positions
