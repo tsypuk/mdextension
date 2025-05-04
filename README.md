@@ -2,6 +2,8 @@
 
 A Chrome extension for saving web pages as Markdown with images, built with TypeScript.
 
+![img.png](img.png)
+
 ## Features
 
 - Save any web page as a Markdown file
