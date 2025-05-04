@@ -162,64 +162,9 @@ function htmlToMarkdown(element, images, settings) {
                         }
                         break;
                     case 'table':
+                        // Handle tables with complex structure
+                        result += processTable(element);
                         result += '\n\n';
-                        // Handle tables
-                        const rows = element.querySelectorAll('tr');
-                        if (rows.length > 0) {
-                            // Process header row
-                            const headerRow = rows[0];
-                            const headers = headerRow.querySelectorAll('th');
-                            if (headers.length > 0) {
-                                // Table with headers
-                                result += '| ' + Array.from(headers).map(th => {
-                                    // Process header cell content including images
-                                    let cellContent = '';
-                                    for (let i = 0; i < th.childNodes.length; i++) {
-                                        cellContent += processNode(th.childNodes[i], depth + 1);
-                                    }
-                                    return cellContent.trim().replace(/\n/g, ' ');
-                                }).join(' | ') + ' |\n';
-                                result += '| ' + Array.from(headers).map(() => '---').join(' | ') + ' |\n';
-                                // Process data rows
-                                for (let i = 1; i < rows.length; i++) {
-                                    const cells = rows[i].querySelectorAll('td');
-                                    result += '| ' + Array.from(cells).map(td => {
-                                        // Process cell content including images
-                                        let cellContent = '';
-                                        for (let i = 0; i < td.childNodes.length; i++) {
-                                            cellContent += processNode(td.childNodes[i], depth + 1);
-                                        }
-                                        return cellContent.trim().replace(/\n/g, ' ');
-                                    }).join(' | ') + ' |\n';
-                                }
-                            }
-                            else {
-                                // Table without headers, use first row as header
-                                const firstRowCells = rows[0].querySelectorAll('td');
-                                result += '| ' + Array.from(firstRowCells).map(td => {
-                                    // Process cell content including images
-                                    let cellContent = '';
-                                    for (let i = 0; i < td.childNodes.length; i++) {
-                                        cellContent += processNode(td.childNodes[i], depth + 1);
-                                    }
-                                    return cellContent.trim().replace(/\n/g, ' ');
-                                }).join(' | ') + ' |\n';
-                                result += '| ' + Array.from(firstRowCells).map(() => '---').join(' | ') + ' |\n';
-                                // Process remaining rows
-                                for (let i = 1; i < rows.length; i++) {
-                                    const cells = rows[i].querySelectorAll('td');
-                                    result += '| ' + Array.from(cells).map(td => {
-                                        // Process cell content including images
-                                        let cellContent = '';
-                                        for (let i = 0; i < td.childNodes.length; i++) {
-                                            cellContent += processNode(td.childNodes[i], depth + 1);
-                                        }
-                                        return cellContent.trim().replace(/\n/g, ' ');
-                                    }).join(' | ') + ' |\n';
-                                }
-                            }
-                            result += '\n';
-                        }
                         break;
                     case 'td':
                     case 'th':
@@ -242,6 +187,88 @@ function htmlToMarkdown(element, images, settings) {
                     result += text + ' ';
                 }
                 break;
+        }
+        return result;
+    }
+    // Function to process a table element with support for colspan and rowspan
+    function processTable(tableElement) {
+        let result = '\n\n';
+        const rows = tableElement.querySelectorAll('tr');
+        if (rows.length === 0)
+            return '';
+        // First, analyze the table structure to determine the actual number of columns
+        let maxColumns = 0;
+        rows.forEach(row => {
+            let columnCount = 0;
+            const cells = row.querySelectorAll('td, th');
+            cells.forEach(cell => {
+                const colspan = parseInt(cell.getAttribute('colspan') || '1');
+                columnCount += colspan;
+            });
+            maxColumns = Math.max(maxColumns, columnCount);
+        });
+        // Create a 2D representation of the table to handle rowspan and colspan
+        const tableGrid = [];
+        let rowIndex = 0;
+        rows.forEach(row => {
+            if (!tableGrid[rowIndex]) {
+                tableGrid[rowIndex] = Array(maxColumns).fill('');
+            }
+            let colIndex = 0;
+            const cells = row.querySelectorAll('td, th');
+            // Skip columns that are already filled due to rowspan from previous rows
+            while (colIndex < maxColumns && tableGrid[rowIndex][colIndex] !== '') {
+                colIndex++;
+            }
+            cells.forEach(cell => {
+                // Skip columns that are already filled
+                while (colIndex < maxColumns && tableGrid[rowIndex][colIndex] !== '') {
+                    colIndex++;
+                }
+                if (colIndex >= maxColumns)
+                    return;
+                // Process cell content
+                let cellContent = '';
+                for (let i = 0; i < cell.childNodes.length; i++) {
+                    cellContent += processNode(cell.childNodes[i], 0);
+                }
+                cellContent = cellContent.trim().replace(/\n/g, ' ');
+                // Handle colspan
+                const colspan = parseInt(cell.getAttribute('colspan') || '1');
+                const rowspan = parseInt(cell.getAttribute('rowspan') || '1');
+                // Fill the current cell and any cells it spans
+                for (let r = 0; r < rowspan; r++) {
+                    for (let c = 0; c < colspan; c++) {
+                        const currentRow = rowIndex + r;
+                        const currentCol = colIndex + c;
+                        // Create row if it doesn't exist
+                        if (!tableGrid[currentRow]) {
+                            tableGrid[currentRow] = Array(maxColumns).fill('');
+                        }
+                        // Only put content in the first cell, leave others empty but marked as spanned
+                        if (r === 0 && c === 0) {
+                            tableGrid[currentRow][currentCol] = cellContent;
+                        }
+                        else {
+                            tableGrid[currentRow][currentCol] = ''; // Mark as spanned
+                        }
+                    }
+                }
+                colIndex += colspan;
+            });
+            rowIndex++;
+        });
+        // Convert the grid to markdown table
+        // First row is always treated as header
+        if (tableGrid.length > 0) {
+            // Header row
+            result += '| ' + tableGrid[0].map(cell => cell || ' ').join(' | ') + ' |\n';
+            // Separator row
+            result += '| ' + tableGrid[0].map(() => '---').join(' | ') + ' |\n';
+            // Data rows
+            for (let i = 1; i < tableGrid.length; i++) {
+                result += '| ' + tableGrid[i].map(cell => cell || ' ').join(' | ') + ' |\n';
+            }
         }
         return result;
     }
