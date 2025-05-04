@@ -1,4 +1,4 @@
-# Markdown Page Saver Chrome Extension
+# Markdown Page Saver Chrome Extension for "Second Brain"
 
 A Chrome extension for saving web pages as Markdown with images, built with TypeScript.
 

@@ -183,35 +183,75 @@ function htmlToMarkdown(element: HTMLElement, images: ImageInfo[], settings: Set
             break;
             
           case 'table':
+            result += '\n\n'
             // Handle tables
             const rows = element.querySelectorAll('tr');
             if (rows.length > 0) {
               // Process header row
               const headerRow = rows[0];
               const headers = headerRow.querySelectorAll('th');
+              
               if (headers.length > 0) {
                 // Table with headers
-                result += '| ' + Array.from(headers).map(th => th.textContent?.trim() || '').join(' | ') + ' |\n';
+                result += '| ' + Array.from(headers).map(th => {
+                  // Process header cell content including images
+                  let cellContent = '';
+                  for (let i = 0; i < th.childNodes.length; i++) {
+                    cellContent += processNode(th.childNodes[i], depth + 1);
+                  }
+                  return cellContent.trim().replace(/\n/g, ' ');
+                }).join(' | ') + ' |\n';
+                
                 result += '| ' + Array.from(headers).map(() => '---').join(' | ') + ' |\n';
                 
                 // Process data rows
                 for (let i = 1; i < rows.length; i++) {
                   const cells = rows[i].querySelectorAll('td');
-                  result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
+                  result += '| ' + Array.from(cells).map(td => {
+                    // Process cell content including images
+                    let cellContent = '';
+                    for (let i = 0; i < td.childNodes.length; i++) {
+                      cellContent += processNode(td.childNodes[i], depth + 1);
+                    }
+                    return cellContent.trim().replace(/\n/g, ' ');
+                  }).join(' | ') + ' |\n';
                 }
               } else {
                 // Table without headers, use first row as header
-                const cells = rows[0].querySelectorAll('td');
-                result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
-                result += '| ' + Array.from(cells).map(() => '---').join(' | ') + ' |\n';
+                const firstRowCells = rows[0].querySelectorAll('td');
+                result += '| ' + Array.from(firstRowCells).map(td => {
+                  // Process cell content including images
+                  let cellContent = '';
+                  for (let i = 0; i < td.childNodes.length; i++) {
+                    cellContent += processNode(td.childNodes[i], depth + 1);
+                  }
+                  return cellContent.trim().replace(/\n/g, ' ');
+                }).join(' | ') + ' |\n';
+                
+                result += '| ' + Array.from(firstRowCells).map(() => '---').join(' | ') + ' |\n';
                 
                 // Process remaining rows
                 for (let i = 1; i < rows.length; i++) {
                   const cells = rows[i].querySelectorAll('td');
-                  result += '| ' + Array.from(cells).map(td => td.textContent?.trim() || '').join(' | ') + ' |\n';
+                  result += '| ' + Array.from(cells).map(td => {
+                    // Process cell content including images
+                    let cellContent = '';
+                    for (let i = 0; i < td.childNodes.length; i++) {
+                      cellContent += processNode(td.childNodes[i], depth + 1);
+                    }
+                    return cellContent.trim().replace(/\n/g, ' ');
+                  }).join(' | ') + ' |\n';
                 }
               }
               result += '\n';
+            }
+            break;
+            
+          case 'td':
+          case 'th':
+            // Process table cell content directly
+            for (let i = 0; i < element.childNodes.length; i++) {
+              result += processNode(element.childNodes[i], depth + 1);
             }
             break;
             
