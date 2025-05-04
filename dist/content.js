@@ -119,7 +119,7 @@ function htmlToMarkdown(element, images, settings) {
                         for (let i = 0; i < element.childNodes.length; i++) {
                             boldContent += processNode(element.childNodes[i], depth + 1);
                         }
-                        result += `**${boldContent}**`;
+                        result += `**${boldContent.trim()}**`;
                         break;
                     case 'em':
                     case 'i':
@@ -127,7 +127,7 @@ function htmlToMarkdown(element, images, settings) {
                         for (let i = 0; i < element.childNodes.length; i++) {
                             italicContent += processNode(element.childNodes[i], depth + 1);
                         }
-                        result += `*${italicContent}*`;
+                        result += `*${italicContent.trim()}*`;
                         break;
                     case 'code':
                         result += `\`${(_c = element.textContent) === null || _c === void 0 ? void 0 : _c.trim()}\``;
